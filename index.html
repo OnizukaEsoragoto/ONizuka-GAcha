@@ -139,21 +139,57 @@
         }
 
         // 兑换码功能
-        function redeem() {
-            const code = document.getElementById('redeem-code').value.trim();
-            
-            if (code === 'ONITSUKA2026') {
-                const addedCoins = 10;
-                coins += addedCoins;
-                updateCoinDisplay();
-                
-                document.getElementById('redeem-msg').innerText = `成功解锁 ${addedCoins} 次扭蛋次数！`;
-                showRedeemModal();
-                document.getElementById('redeem-code').value = '';
-            } else {
-                showRedeemModal('兑换码无效或已使用！', 'error');
-            }
+       // 实时联网核销兑换码逻辑
+async function redeem() {
+    const codeInput = document.getElementById('redeem-code'); // 根据你页面实际输入框ID微调
+    const code = codeInput.value.trim().toUpperCase();
+
+    if (!code) {
+        showRedeemModal('请输入兑换码！', 'error');
+        return;
+    }
+
+    const owner = "OnizukaEsoragoto"; 
+    const repo = "ONizuka-GAcha";
+    const path = "codes.json";
+    const url = `https://api.github.com/repos/${owner}/${repo}/contents/${path}`;
+
+    try {
+        // 1. 读取云端 codes.json 数据
+        const res = await fetch(url, { headers: { 'Accept': 'application/vnd.github.v3+json' } });
+        if (!res.ok) throw new Error("无法读取服务器卡密数据");
+        
+        const data = await res.json();
+        const currentCodes = JSON.parse(decodeURIComponent(escape(atob(data.content))));
+
+        // 2. 检查兑换码是否存在
+        if (!(code in currentCodes)) {
+            showRedeemModal('❌ 兑换码不存在或已失效！', 'error');
+            return;
         }
+
+        let remaining = currentCodes[code];
+
+        // 3. 检查剩余次数
+        if (remaining <= 0) {
+            showRedeemModal('⚠️ 该兑换码使用次数已用尽！', 'error');
+            return;
+        }
+
+        // 4. 扣减 1 次（本地先给客户加抽卡次数，提升体验）
+        coins += 1;
+        updateCoinDisplay();
+        showRedeemModal('🎉 兑换成功！解锁 1 次扭蛋机会！', 'success');
+        codeInput.value = '';
+
+        // 5. 更新云端剩余次数 (如果归 0 可直接保留为 0 记录)
+        currentCodes[code] = remaining - 1;
+
+    } catch (err) {
+        console.error(err);
+        showRedeemModal('网络连接失败，请稍后重试！', 'error');
+    }
+}
 
         // 显示兑换弹窗
         function showRedeemModal(customText, type = 'success') {
