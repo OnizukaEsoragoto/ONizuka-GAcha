@@ -58,6 +58,7 @@
     </style>
 </head>
 <body>
+
 <!-- 兑换成功专属弹窗 -->
 <div class="modal" id="redeem-modal">
     <div class="card" id="redeem-card">
@@ -71,6 +72,7 @@
         <button class="close-btn" onclick="closeRedeemModal()" style="margin-top: 15px;">开心收下</button>
     </div>
 </div>
+
     <div class="header">
         <div>剩余抽卡次数: <span id="coin-count" style="color:#ff5252; font-weight:bold; font-size: 20px;">0</span></div>
         <div style="margin-top: 10px;">
@@ -121,55 +123,58 @@
             { rank: 'R', name: '单人Q版头像', chance: 0.75, color: '#90caf9' } // 75%
         ];
 
+        // 更新次数显示
+        function updateCoinDisplay() {
+            document.getElementById('coin-count').innerText = coins;
+        }
+
         // 兑换码功能
-        // 修改后的兑换逻辑：使用自定义卡面弹窗代替原生 alert
-function redeem() {
-    const code = document.getElementById('redeem-code').value.trim();
-    
-    // 测试兑换码逻辑 (后续可接数据库)
-    if (code === 'ONITSUKA2026') {
-        const addedCoins = 10;
-        coins += addedCoins;
-        updateCoinDisplay();
-        
-        // 自定义卡片中的提示文字 (这里可以根据不同兑换码自定义内容)
-        document.getElementById('redeem-msg').innerText = `成功解锁 ${addedCoins} 次扭蛋次数！`;
-        
-        // 如果想针对不同卡密换不同卡面，可以在这里替换图片 src:
-        // document.getElementById('redeem-img').innerHTML = `<img src="images/redeem_10coins.png" style="max-width:100%; height:100%;">`;
+        function redeem() {
+            const code = document.getElementById('redeem-code').value.trim();
+            
+            if (code === 'ONITSUKA2026') {
+                const addedCoins = 10;
+                coins += addedCoins;
+                updateCoinDisplay();
+                
+                document.getElementById('redeem-msg').innerText = `成功解锁 ${addedCoins} 次扭蛋次数！`;
+                showRedeemModal();
+                document.getElementById('redeem-code').value = '';
+            } else {
+                showRedeemModal('兑换码无效或已使用！', 'error');
+            }
+        }
 
-        // 显示专属弹窗
-        showRedeemModal();
-        
-        // 清空输入框
-        document.getElementById('redeem-code').value = '';
-    } else {
-        // 如果输错，也可以做成漂亮弹窗，或者简单提示
-        showRedeemModal('兑换码无效或已使用！', 'error');
-    }
-}
+        // 显示兑换弹窗
+        function showRedeemModal(customText, type = 'success') {
+            const modal = document.getElementById('redeem-modal');
+            const card = document.getElementById('redeem-card');
+            
+            if (type === 'error') {
+                document.getElementById('redeem-msg').innerText = customText || '兑换码无效！';
+            }
+            
+            modal.style.display = 'flex';
+            setTimeout(() => card.classList.add('show'), 10);
+        }
 
-// 显示兑换弹窗
-function showRedeemModal(customText, type = 'success') {
-    const modal = document.getElementById('redeem-modal');
-    const card = document.getElementById('redeem-card');
-    
-    if (type === 'error') {
-        document.getElementById('redeem-msg').innerText = customText || '兑换码无效！';
-    }
-    
-    modal.style.display = 'flex';
-    setTimeout(() => card.classList.add('show'), 10);
-}
+        // 关闭兑换弹窗
+        function closeRedeemModal() {
+            const card = document.getElementById('redeem-card');
+            card.classList.remove('show');
+            setTimeout(() => {
+                document.getElementById('redeem-modal').style.display = 'none';
+            }, 300);
+        }
 
-// 关闭兑换弹窗
-function closeRedeemModal() {
-    const card = document.getElementById('redeem-card');
-    card.classList.remove('show');
-    setTimeout(() => {
-        document.getElementById('redeem-modal').style.display = 'none';
-    }, 300);
-}
+        // 抽卡主逻辑
+        function draw() {
+            if (isDrawing) return;
+            if (coins <= 0) {
+                showRedeemModal('没有抽卡次数啦！请先在上方输入兑换码。', 'error');
+                return;
+            }
+
             isDrawing = true;
             coins--;
             updateCoinDisplay();
@@ -221,7 +226,7 @@ function closeRedeemModal() {
             document.getElementById('prize-rank').style.color = prize.color;
             document.getElementById('prize-name').innerText = prize.name;
             
-            // 生成防伪码：时间戳(转成字母数字) + 随机哈希
+            // 生成防伪码
             const timestamp = Date.now().toString(36).toUpperCase();
             const randomHash = Math.random().toString(36).substring(2, 6).toUpperCase();
             const fullCode = `ONI-${prize.rank}-${timestamp}-${randomHash}`;
@@ -229,7 +234,6 @@ function closeRedeemModal() {
             document.getElementById('hash-code').innerText = `凭证码: ${fullCode}\n(请截图保存此画面找画师约稿)`;
 
             modal.style.display = 'flex';
-            // 延迟一点点加 class 让缩放动画生效
             setTimeout(() => card.classList.add('show'), 10);
         }
 
